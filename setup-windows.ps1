@@ -350,21 +350,10 @@ function Invoke-Step2 {
         Write-SubStep "Installation de WSL et Ubuntu en cours..."
         Write-Info "Cela peut prendre plusieurs minutes..."
 
-        Write-Manual @"
-L'installation de WSL et Ubuntu va demarrer.
-Une fenetre Ubuntu va s'ouvrir automatiquement.
-
-  1. Attendez l'initialisation (peut prendre 2-3 minutes)
-  2. Creez un nom d'utilisateur (en minuscules, sans espaces)
-  3. Creez un mot de passe (vous ne le verrez pas s'afficher, c'est normal)
-  4. Une fois le prompt vert affiche (ex: user@PC:~$), tapez : exit
-  5. Revenez ici et appuyez sur Entree
-"@
-
         $installOutput = wsl --install -d Ubuntu 2>&1
         Write-Host $installOutput
 
-        # Detecter si un redemarrage est necessaire
+        # Detecter si un redemarrage est necessaire (premiere installation de WSL)
         if ($installOutput -match "redemar" -or $installOutput -match "reboot" -or $installOutput -match "reamor") {
             Write-Host ""
             Write-Host "============================================" -ForegroundColor Yellow
@@ -390,6 +379,7 @@ Une fenetre Ubuntu va s'ouvrir automatiquement.
             exit 0
         }
 
+        # Si pas de redemarrage necessaire, Ubuntu s'est lance automatiquement
         Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure et ferme..."
         Write-Success "WSL et Ubuntu installes"
     }
