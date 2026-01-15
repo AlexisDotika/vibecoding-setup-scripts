@@ -348,14 +348,26 @@ function Invoke-Step2 {
 
     if (-not $wslInstalled) {
         Write-SubStep "Installation de WSL et Ubuntu en cours..."
-        Write-Info "Cela peut prendre quelques minutes..."
+        Write-Info "Cela peut prendre plusieurs minutes..."
+
+        Write-Manual @"
+L'installation de WSL et Ubuntu va demarrer.
+Une fenetre Ubuntu va s'ouvrir automatiquement.
+
+  1. Attendez l'initialisation (peut prendre 2-3 minutes)
+  2. Creez un nom d'utilisateur (en minuscules, sans espaces)
+  3. Creez un mot de passe (vous ne le verrez pas s'afficher, c'est normal)
+  4. Une fois le prompt vert affiche (ex: user@PC:~$), tapez : exit
+  5. Revenez ici et appuyez sur Entree
+"@
 
         Invoke-WithRetry -Description "Installation WSL + Ubuntu" -Action {
-            wsl --install -d Ubuntu --no-launch
+            wsl --install -d Ubuntu
             if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation WSL/Ubuntu" }
         }
 
-        Write-Success "WSL et Ubuntu installes avec succes"
+        Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure et ferme..."
+        Write-Success "WSL et Ubuntu installes"
     }
 
     # Verifier si Ubuntu est installe ET initialise
@@ -374,19 +386,32 @@ function Invoke-Step2 {
     }
 
     if (-not $ubuntuReady) {
-        # Verifier si Ubuntu est dans la liste mais pas initialise
+        # Verifier si Ubuntu est dans la liste
         $distros = wsl -l -q 2>&1
 
         if ($distros -notmatch "Ubuntu") {
             Write-WarningMsg "Ubuntu n'est pas installe. Installation..."
 
+            Write-Manual @"
+L'installation d'Ubuntu va demarrer.
+Une fenetre Ubuntu va s'ouvrir automatiquement.
+
+  1. Attendez l'initialisation (peut prendre 2-3 minutes)
+  2. Creez un nom d'utilisateur (en minuscules, sans espaces)
+  3. Creez un mot de passe (vous ne le verrez pas s'afficher, c'est normal)
+  4. Une fois le prompt vert affiche (ex: user@PC:~$), tapez : exit
+  5. Revenez ici et appuyez sur Entree
+"@
+
             Invoke-WithRetry -Description "Installation Ubuntu" -Action {
-                wsl --install -d Ubuntu --no-launch
+                wsl --install -d Ubuntu
                 if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation Ubuntu" }
             }
-        }
 
-        Write-Manual @"
+            Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure et ferme..."
+        } else {
+            # Ubuntu est installe mais pas initialise
+            Write-Manual @"
 Ubuntu doit etre initialise. Suivez ces etapes :
 
   1. Ouvrez 'Ubuntu' depuis le menu Demarrer Windows
@@ -397,7 +422,8 @@ Ubuntu doit etre initialise. Suivez ces etapes :
   5. Une fois le prompt vert affiche (ex: user@PC:~$), tapez : exit
   6. Fermez la fenetre Ubuntu
 "@
-        Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure..."
+            Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure..."
+        }
 
         # Re-verifier apres l'action manuelle
         try {
