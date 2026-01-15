@@ -361,9 +361,33 @@ Une fenetre Ubuntu va s'ouvrir automatiquement.
   5. Revenez ici et appuyez sur Entree
 "@
 
-        Invoke-WithRetry -Description "Installation WSL + Ubuntu" -Action {
-            wsl --install -d Ubuntu
-            if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation WSL/Ubuntu" }
+        $installOutput = wsl --install -d Ubuntu 2>&1
+        Write-Host $installOutput
+
+        # Detecter si un redemarrage est necessaire
+        if ($installOutput -match "redemar" -or $installOutput -match "reboot" -or $installOutput -match "reamor") {
+            Write-Host ""
+            Write-Host "============================================" -ForegroundColor Yellow
+            Write-Host "  REDEMARRAGE NECESSAIRE" -ForegroundColor Yellow
+            Write-Host "============================================" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "C'est la premiere installation de WSL sur cette machine." -ForegroundColor White
+            Write-Host "Windows necessite un redemarrage pour finaliser." -ForegroundColor White
+            Write-Host ""
+            Write-Host "Apres le redemarrage :" -ForegroundColor Cyan
+            Write-Host "  1. Ouvrez 'Ubuntu' depuis le menu Demarrer" -ForegroundColor Gray
+            Write-Host "  2. Creez votre utilisateur Linux (nom + mot de passe)" -ForegroundColor Gray
+            Write-Host "  3. Tapez 'exit' et fermez Ubuntu" -ForegroundColor Gray
+            Write-Host "  4. Relancez ce script avec : .\setup-windows.ps1 -Step 2" -ForegroundColor Gray
+            Write-Host ""
+
+            Save-Progress 2
+
+            $restart = Read-Host "Voulez-vous redemarrer maintenant ? (O/N)"
+            if ($restart -eq "O" -or $restart -eq "o") {
+                Restart-Computer -Force
+            }
+            exit 0
         }
 
         Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure et ferme..."
