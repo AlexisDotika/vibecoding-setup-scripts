@@ -26,7 +26,7 @@
 
 .NOTES
     Auteur: Formation Vibecoding
-    Version: 3.0
+    Version: 3.1
 #>
 
 param(
@@ -39,7 +39,7 @@ param(
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue"
 $PROGRESS_FILE = "$env:USERPROFILE\.vibecoding_setup_progress"
-$SCRIPT_VERSION = "3.0"
+$SCRIPT_VERSION = "3.1"
 
 # Variables globales pour le repo
 $script:RepoUrl = ""
@@ -334,6 +334,7 @@ Vous devez creer un compte Anthropic et prendre l'abonnement Max :
 function Invoke-Step2 {
     Write-Step "Etape 2/10 : Installation de WSL (Windows Subsystem for Linux)"
 
+    # Verifier si WSL est installe
     $wslInstalled = $false
     try {
         $wslStatus = wsl --status 2>&1
@@ -346,66 +347,71 @@ function Invoke-Step2 {
     }
 
     if (-not $wslInstalled) {
-        Write-SubStep "Installation de WSL en cours..."
+        Write-SubStep "Installation de WSL et Ubuntu en cours..."
         Write-Info "Cela peut prendre quelques minutes..."
 
-        $success = Invoke-WithRetry -Description "Installation WSL" -Action {
-            wsl --install --no-launch
-            if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation WSL" }
+        Invoke-WithRetry -Description "Installation WSL + Ubuntu" -Action {
+            wsl --install -d Ubuntu --no-launch
+            if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation WSL/Ubuntu" }
         }
 
-        if ($success) {
-            Write-Success "WSL installe avec succes"
-            Write-Host ""
-            Write-Host "============================================" -ForegroundColor Yellow
-            Write-Host "  REDEMARRAGE NECESSAIRE" -ForegroundColor Yellow
-            Write-Host "============================================" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "WSL necessite un redemarrage pour finaliser l'installation." -ForegroundColor White
-            Write-Host ""
-            Write-Host "Apres le redemarrage :" -ForegroundColor White
-            Write-Host "  1. Ouvrez 'Ubuntu' depuis le menu Demarrer" -ForegroundColor Gray
-            Write-Host "  2. Creez votre utilisateur Linux (nom + mot de passe)" -ForegroundColor Gray
-            Write-Host "  3. Fermez Ubuntu" -ForegroundColor Gray
-            Write-Host "  4. Relancez ce script dans PowerShell Admin" -ForegroundColor Gray
-            Write-Host ""
-
-            Save-Progress 2
-
-            $restart = Read-Host "Voulez-vous redemarrer maintenant ? (O/N)"
-            if ($restart -eq "O" -or $restart -eq "o") {
-                Restart-Computer -Force
-            } else {
-                Write-WarningMsg "N'oubliez pas de redemarrer et de relancer ce script !"
-            }
-            exit 0
-        }
+        Write-Success "WSL et Ubuntu installes avec succes"
     }
 
-    # Verification Ubuntu
+    # Verifier si Ubuntu est installe ET initialise
     Write-SubStep "Verification de la distribution Ubuntu..."
-    $distros = wsl -l -q 2>&1
-    if ($distros -notmatch "Ubuntu") {
-        Write-WarningMsg "Ubuntu n'est pas installe. Installation..."
 
-        Invoke-WithRetry -Description "Installation Ubuntu" -Action {
-            wsl --install -d Ubuntu --no-launch
-            if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation Ubuntu" }
+    $ubuntuReady = $false
+    try {
+        # Tester si on peut executer une commande dans WSL
+        $testResult = wsl -d Ubuntu -- echo "ok" 2>&1
+        if ($LASTEXITCODE -eq 0 -and $testResult -match "ok") {
+            $ubuntuReady = $true
+            Write-Success "Ubuntu est disponible et configure"
+        }
+    } catch {
+        $ubuntuReady = $false
+    }
+
+    if (-not $ubuntuReady) {
+        # Verifier si Ubuntu est dans la liste mais pas initialise
+        $distros = wsl -l -q 2>&1
+
+        if ($distros -notmatch "Ubuntu") {
+            Write-WarningMsg "Ubuntu n'est pas installe. Installation..."
+
+            Invoke-WithRetry -Description "Installation Ubuntu" -Action {
+                wsl --install -d Ubuntu --no-launch
+                if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation Ubuntu" }
+            }
         }
 
         Write-Manual @"
-Ubuntu a ete installe. Vous devez maintenant le configurer :
+Ubuntu doit etre initialise. Suivez ces etapes :
 
-  1. Ouvrez 'Ubuntu' depuis le menu Demarrer
+  1. Ouvrez 'Ubuntu' depuis le menu Demarrer Windows
+     (tapez 'Ubuntu' dans la barre de recherche)
   2. Attendez l'initialisation (peut prendre 1-2 minutes)
   3. Creez un nom d'utilisateur (en minuscules, sans espaces)
   4. Creez un mot de passe (vous ne le verrez pas s'afficher, c'est normal)
-  5. Fermez la fenetre Ubuntu
+  5. Une fois le prompt vert affiche (ex: user@PC:~$), tapez : exit
+  6. Fermez la fenetre Ubuntu
 "@
         Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure..."
+
+        # Re-verifier apres l'action manuelle
+        try {
+            $testResult = wsl -d Ubuntu -- echo "ok" 2>&1
+            if ($LASTEXITCODE -eq 0 -and $testResult -match "ok") {
+                Write-Success "Ubuntu est maintenant configure"
+            } else {
+                Write-WarningMsg "Ubuntu semble ne pas etre pret, mais on continue..."
+            }
+        } catch {
+            Write-WarningMsg "Impossible de verifier Ubuntu, mais on continue..."
+        }
     }
 
-    Write-Success "Ubuntu est disponible et configure"
     Save-Progress 3
 }
 
