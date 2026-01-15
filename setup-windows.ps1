@@ -350,38 +350,27 @@ function Invoke-Step2 {
         Write-SubStep "Installation de WSL et Ubuntu en cours..."
         Write-Info "Cela peut prendre plusieurs minutes..."
 
-        $installOutput = wsl --install -d Ubuntu 2>&1
-        Write-Host $installOutput
+        wsl --install -d Ubuntu
 
-        # Detecter si un redemarrage est necessaire (premiere installation de WSL)
-        if ($installOutput -match "redemar" -or $installOutput -match "reboot" -or $installOutput -match "reamor") {
-            Write-Host ""
-            Write-Host "============================================" -ForegroundColor Yellow
-            Write-Host "  REDEMARRAGE NECESSAIRE" -ForegroundColor Yellow
-            Write-Host "============================================" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "C'est la premiere installation de WSL sur cette machine." -ForegroundColor White
-            Write-Host "Windows necessite un redemarrage pour finaliser." -ForegroundColor White
-            Write-Host ""
-            Write-Host "Apres le redemarrage :" -ForegroundColor Cyan
-            Write-Host "  1. Ouvrez 'Ubuntu' depuis le menu Demarrer" -ForegroundColor Gray
-            Write-Host "  2. Creez votre utilisateur Linux (nom + mot de passe)" -ForegroundColor Gray
-            Write-Host "  3. Tapez 'exit' et fermez Ubuntu" -ForegroundColor Gray
-            Write-Host "  4. Relancez ce script avec : .\setup-windows.ps1 -Step 2" -ForegroundColor Gray
-            Write-Host ""
+        Write-Host ""
+        Write-Host "============================================" -ForegroundColor Yellow
+        Write-Host "  REDEMARRAGE NECESSAIRE" -ForegroundColor Yellow
+        Write-Host "============================================" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Apres le redemarrage :" -ForegroundColor Cyan
+        Write-Host "  1. Ouvrez 'Ubuntu' depuis le menu Demarrer" -ForegroundColor Gray
+        Write-Host "  2. Creez votre utilisateur Linux (nom + mot de passe)" -ForegroundColor Gray
+        Write-Host "  3. Tapez 'exit' et fermez Ubuntu" -ForegroundColor Gray
+        Write-Host "  4. Relancez ce script" -ForegroundColor Gray
+        Write-Host ""
 
-            Save-Progress 2
+        Save-Progress 2
 
-            $restart = Read-Host "Voulez-vous redemarrer maintenant ? (O/N)"
-            if ($restart -eq "O" -or $restart -eq "o") {
-                Restart-Computer -Force
-            }
-            exit 0
+        $restart = Read-Host "Voulez-vous redemarrer maintenant ? (O/N)"
+        if ($restart -eq "O" -or $restart -eq "o") {
+            Restart-Computer -Force
         }
-
-        # Si pas de redemarrage necessaire, Ubuntu s'est lance automatiquement
-        Wait-ForUser "Appuyez sur Entree une fois Ubuntu configure et ferme..."
-        Write-Success "WSL et Ubuntu installes"
+        exit 0
     }
 
     # Verifier si Ubuntu est installe ET initialise
